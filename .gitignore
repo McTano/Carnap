@@ -23,8 +23,8 @@ Sessionx.vim
 *.sqlite3
 yesod-devel
 Carnap-Server/app/SecureStrings.hs
-dataroot
-Carnap-Book/cache
+dataroot/*
+Carnap-Book/cache/*
 Carnap-Server/static/tmp/
 Carnap-Server/static/faygen*
 Carnap-GHCJS/test/testpages/
