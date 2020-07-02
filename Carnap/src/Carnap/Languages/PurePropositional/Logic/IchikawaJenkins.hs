@@ -132,7 +132,7 @@ ichikawaJenkinsSLCalc = mkNDCalc
 --  Semantic Tableaux  --
 -------------------------
 
-data IchikawaJenkinsSLTableaux = Ax1 | Ax2 | Conj | NConj | Disj | NDisj | Cond | NCond | Bicond | NBicond | DoubleNeg | Struct | Lit
+data IchikawaJenkinsSLTableaux = Ax1 | Ax2 | Conj | NConj | Disj | NDisj1 | NDisj2 | Cond | NCond | Bicond1 | Bicond2 | NBicond1 | NBicond2 | DoubleNeg | Struct | Lit
     deriving Eq
 
 instance Show IchikawaJenkinsSLTableaux where
@@ -143,15 +143,19 @@ instance Show IchikawaJenkinsSLTableaux where
     show Conj = "&"
     show NConj = "¬&"
     show Disj  = "∨"
-    show NDisj = "¬∨"
+    show NDisj1 = "¬∨"
+    show NDisj2 = "¬∨"
     show Cond = "⊃" 
     show NCond = "¬⊃"
-    show Bicond = "≡"
-    show NBicond = "¬≡"
+    show Bicond1 = "≡"
+    show Bicond2 = "≡"
+    show NBicond1 = "¬≡"
+    show NBicond2 = "¬≡"
     show DoubleNeg = "¬¬"
 
 parseIchikawaJenkinsSLTableaux :: Parsec String u [IchikawaJenkinsSLTableaux]
 parseIchikawaJenkinsSLTableaux = do r <- choice (map (try . string) ["&","¬&","~&","-&"
+                                                                ,"/\\","¬/\\","~/\\","-/\\"
                                                                 ,"∨","¬∨","~∨","-∨"
                                                                 , "v", "¬v","~v","-v"
                                                                 , "\\/", "¬\\/","~\\/","-\\/"
@@ -172,11 +176,11 @@ parseIchikawaJenkinsSLTableaux = do r <- choice (map (try . string) ["&","¬&","
                                          | r == "Ax" -> [Ax1,Ax2]
                                          | r `elem` ["¬&","~&","-&"] -> [NConj]
                                          | r `elem` ["∨","v","\\/"] -> [Disj]
-                                         | r `elem` [ "¬∨","~∨","-∨", "¬\\/","~\\/","-\\/", "¬v","~v","-v"] -> [NDisj]
+                                         | r `elem` [ "¬∨","~∨","-∨", "¬\\/","~\\/","-\\/", "¬v","~v","-v"] -> [NDisj1, NDisj2]
                                          | r `elem` ["⊃","->",">","C"] -> [Cond]
                                          | r `elem` [ "¬⊃","~⊃","-⊃", "¬>","~>","->", "¬->","~->","-->", "¬C","~C","-C"] -> [NCond]
-                                         | r `elem` ["≡","<->","<>","B"] -> [Bicond]
-                                         | r `elem` [ "¬≡","~≡","-≡", "¬<->","~<->","-<->", "¬<>","~<>","-<>", "¬B","~B","-B"] -> [NBicond]
+                                         | r `elem` ["≡","<->","<>","B"] -> [Bicond1, Bicond2]
+                                         | r `elem` [ "¬≡","~≡","-≡", "¬<->","~<->","-<->", "¬<>","~<>","-<>", "¬B","~B","-B"] -> [NBicond1, NBicond2]
                                          | r `elem` [ "¬¬","~~","--"] -> [DoubleNeg]
                                          | r `elem` [ "St" ] -> [Struct]
                                          | r `elem` [ "Lit" ] -> [Lit]
@@ -184,21 +188,28 @@ parseIchikawaJenkinsSLTableaux = do r <- choice (map (try . string) ["&","¬&","
 instance CoreInference IchikawaJenkinsSLTableaux PurePropLexicon (Form Bool) where
         corePremisesOf Conj = [SA (phin 1) :+: SA (phin 2) :+: GammaV 1 :|-: Bot]
         corePremisesOf NConj = [ SA (lneg $ phin 1) :+: GammaV 1 :|-: Bot
-                               , SA (lneg $ phin 2) :+: GammaV 2 :|-: Bot
+                               , SA (lneg $ phin 2) :+: GammaV 1 :|-: Bot
                                ]
         corePremisesOf Disj = [ SA (phin 1) :+: GammaV 1 :|-: Bot
-                              , SA (phin 2) :+: GammaV 2 :|-: Bot
+                              , SA (phin 2) :+: GammaV 1 :|-: Bot
                               ]
-        corePremisesOf NDisj = [SA (lneg $ phin 1) :+: SA (lneg $ phin 2) :+: GammaV 1 :|-: Bot]
+        corePremisesOf NDisj1 = [SA (lneg $ phin 1) :+: SA (lneg $ phin 2) :+: GammaV 1 :|-: Bot]
+        corePremisesOf NDisj2 = [SA (lneg $ phin 1) :+: SA (lneg $ phin 2) :+: GammaV 1 :|-: Bot]
         corePremisesOf Cond = [ SA (lneg $ phin 1) :+: GammaV 1 :|-: Bot
-                              , SA (phin 2) :+: GammaV 2 :|-: Bot
+                              , SA (phin 2) :+: GammaV 1 :|-: Bot
                               ]
         corePremisesOf NCond = [SA (phin 1) :+: SA (lneg $ phin 2) :+: GammaV 1 :|-: Bot]
-        corePremisesOf Bicond = [ SA (phin 1) :+: SA (phin 2) :+: GammaV 1 :|-: Bot
-                                , SA (lneg $ phin 1) :+: SA (lneg $ phin 2) :+: GammaV 2 :|-: Bot
+        corePremisesOf Bicond1 = [ SA (phin 1) :+: SA (phin 2) :+: GammaV 1 :|-: Bot
+                                , SA (lneg $ phin 1) :+: SA (lneg $ phin 2) :+: GammaV 1 :|-: Bot
                                 ]
-        corePremisesOf NBicond = [ SA (phin 1) :+: SA (lneg $ phin 2) :+: GammaV 1 :|-: Bot
-                                 , SA (lneg $ phin 1) :+: SA (phin 2) :+: GammaV 2 :|-: Bot
+        corePremisesOf Bicond2 = [ SA (phin 1) :+: SA (phin 2) :+: GammaV 1 :|-: Bot
+                                , SA (lneg $ phin 1) :+: SA (lneg $ phin 2) :+: GammaV 1 :|-: Bot
+                                ]
+        corePremisesOf NBicond1 = [ SA (phin 1) :+: SA (lneg $ phin 2) :+: GammaV 1 :|-: Bot
+                                 , SA (lneg $ phin 1) :+: SA (phin 2) :+: GammaV 1 :|-: Bot
+                                 ]
+        corePremisesOf NBicond2 = [ SA (phin 1) :+: SA (lneg $ phin 2) :+: GammaV 1 :|-: Bot
+                                 , SA (lneg $ phin 1) :+: SA (phin 2) :+: GammaV 1 :|-: Bot
                                  ]
         corePremisesOf DoubleNeg = [ SA (phin 1)  :+: GammaV 1 :|-: Bot ]
         corePremisesOf Struct = [ GammaV 1 :|-: DeltaV 1 ]
@@ -207,16 +218,19 @@ instance CoreInference IchikawaJenkinsSLTableaux PurePropLexicon (Form Bool) whe
         corePremisesOf Ax2 = []
 
         coreConclusionOf Conj = SA (phin 1 ./\. phin 2) :+: GammaV 1 :|-: Bot
-        coreConclusionOf NConj = SA (lneg $ phin 1 ./\. phin 2 ) :+: GammaV 1 :+: GammaV 2 :|-: Bot
-        coreConclusionOf Disj = SA (phin 1 .\/. phin 2) :+: GammaV 1 :+: GammaV 2 :|-: Bot
-        coreConclusionOf NDisj = SA (lneg $ phin 1 .\/. phin 2) :+: GammaV 1 :|-: Bot
-        coreConclusionOf Cond = SA (phin 1 .=>. phin 2) :+: GammaV 1 :+: GammaV 2 :|-: Bot
-        coreConclusionOf NCond = SA (lneg $ phin 1 .=>. phin 2) :+: GammaV 1 :+: GammaV 2 :|-: Bot
-        coreConclusionOf Bicond = SA (phin 1 .<=>. phin 2) :+: GammaV 1 :+: GammaV 2 :|-: Bot
-        coreConclusionOf NBicond = SA (lneg $ phin 1 .<=>. phin 2) :+: GammaV 1 :+: GammaV 2 :|-: Bot
+        coreConclusionOf NConj = SA (lneg $ phin 1 ./\. phin 2 ) :+: GammaV 1 :|-: Bot
+        coreConclusionOf Disj = SA (phin 1 .\/. phin 2) :+: GammaV 1 :|-: Bot
+        coreConclusionOf NDisj1 = SA (lneg $ phin 1 .\/. phin 2) :+: GammaV 1 :|-: Bot
+        coreConclusionOf NDisj2 = SA (lneg $ phin 2 .\/. phin 1) :+: GammaV 1 :|-: Bot
+        coreConclusionOf Cond = SA (phin 1 .=>. phin 2) :+: GammaV 1 :|-: Bot
+        coreConclusionOf NCond = SA (lneg $ phin 1 .=>. phin 2) :+: GammaV 1 :|-: Bot
+        coreConclusionOf Bicond1 = SA (phin 1 .<=>. phin 2) :+: GammaV 1 :|-: Bot
+        coreConclusionOf Bicond2 = SA (phin 2 .<=>. phin 1) :+: GammaV 1 :|-: Bot
+        coreConclusionOf NBicond1 = SA (lneg $ phin 1 .<=>. phin 2) :+: GammaV 1 :|-: Bot
+        coreConclusionOf NBicond2 = SA (lneg $ phin 2 .<=>. phin 1) :+: GammaV 1 :|-: Bot
         coreConclusionOf DoubleNeg = SA (lneg $ lneg $ phin 1)  :+: GammaV 1 :|-: Bot
         coreConclusionOf Ax1 = SA (phin 1) :+: SA (lneg $ phin 1) :+: GammaV 1 :|-: Bot
-        coreConclusionOf Ax2 = SA (phin 1) :+: SA (lneg $ phin 1) :+: GammaV 1 :|-: Bot
+        coreConclusionOf Ax2 = SA (lneg $ phin 1) :+: SA (phin 1) :+: GammaV 1 :|-: Bot
         coreConclusionOf Struct = GammaV 1 :|-: DeltaV 1
         coreConclusionOf Lit = GammaV 1 :|-: DeltaV 1
 
